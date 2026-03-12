@@ -70,7 +70,19 @@ func (o *options) Run(cmd *cobra.Command, _ []string) error {
 			fmt.Fprintf(stdOut, strings.Repeat("    ", curRule.Depth+2)+"%s\n", key)
 		}
 
-		fmt.Fprintln(stdOut, strings.Repeat("    ", curRule.Depth+1)+fmt.Sprintf("Required valid signatures: %d", curRule.Delegation.GetThreshold()))
+		fmt.Println(strings.Repeat("    ", curRule.Depth+1) + fmt.Sprintf("Required valid signatures: %d", curRule.Delegation.GetThreshold()))
+
+		if d, ok := any(curRule.Delegation).(*v02.Delegation); ok {
+			fmt.Println(strings.Repeat("    ", curRule.Depth+1) +
+				fmt.Sprintf("Scope Type: %s", d.ScopeType))
+			if d.ScopeType == tuf.ScopeLatestN {
+				fmt.Println(strings.Repeat("    ", curRule.Depth+1) +
+					fmt.Sprintf("Scope Value: %d", d.Scope))
+			}
+			accessType := curRule.Delegation.GetAccessType()
+			fmt.Println(strings.Repeat("    ", curRule.Depth+1) + fmt.Sprintf("Access type authorized: %s", accessType.String()))
+		}
+
 		if i < len(rules)-1 {
 			fmt.Fprintln(stdOut)
 		}
