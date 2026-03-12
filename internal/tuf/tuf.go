@@ -41,6 +41,15 @@ const (
 	HookEnvironmentLuaString = "lua"
 
 	HooksPrefix = "hooks"
+
+	ScopeTypeAllString     = "all"
+	ScopeTypeLatestNString = "latest-n"
+	ScopeTypeRangeString   = "range"
+
+	AccessTypeReadWriteString = "read-write"
+	AccessTypeReadOnlyString  = "read-only"
+	AccessTypeWriteOnlyString = "write-only"
+	AccessTypeNoneString      = "none"
 )
 
 var (
@@ -74,6 +83,8 @@ var (
 	ErrInvalidHookEnvironment                          = errors.New("invalid environment for hook")
 	ErrHookNotFound                                    = errors.New("cannot find hook entry")
 	ErrNoHooksDefined                                  = errors.New("no hooks defined")
+	ErrInvalidScopeType                                = errors.New("invalid scope type")
+	ErrInvalidAccessPermission                         = errors.New("invalid permission defined")
 )
 
 // Principal represents an entity that is granted trust by gittuf metadata. In
@@ -226,6 +237,117 @@ type RootMetadata interface {
 	GetHooks(stage HookStage) ([]Hook, error)
 }
 
+// ScopeType defines the type of scope that the rule has.
+type ScopeType uint
+
+const (
+	ScopeAll ScopeType = iota
+	ScopeLatestN
+	ScopeRange
+)
+
+func (s *ScopeType) String() string {
+	switch *s {
+	case ScopeAll:
+		return ScopeTypeAllString
+	case ScopeLatestN:
+		return ScopeTypeLatestNString
+	case ScopeRange:
+		return ScopeTypeRangeString
+	default:
+		return ""
+	}
+}
+
+// MarshalJSON is used to serialize the instance of ScopeType into JSON.
+func (s *ScopeType) MarshalJSON() ([]byte, error) {
+	str := s.String()
+	if str == "" {
+		return nil, ErrInvalidScopeType
+	}
+
+	return json.Marshal(str)
+}
+
+// UnmarshalJSON is used to load an instance of ScopeType into JSON.
+func (s *ScopeType) UnmarshalJSON(data []byte) error {
+	var scopeType string
+	if err := json.Unmarshal(data, &scopeType); err != nil {
+		return err
+	}
+
+	switch scopeType {
+	case ScopeTypeAllString:
+		*s = ScopeAll
+	case ScopeTypeLatestNString:
+		*s = ScopeLatestN
+	case ScopeTypeRangeString:
+		*s = ScopeRange
+	default:
+		return ErrInvalidScopeType
+	}
+
+	return nil
+}
+
+// AccessType defines the type of access that the rule permits.
+type AccessType uint
+
+const (
+	AccessReadWrite AccessType = iota
+	AccessReadOnly
+	AccessWriteOnly
+	AccessNone
+)
+
+func (a *AccessType) String() string {
+	switch *a {
+	case AccessReadWrite:
+		return AccessTypeReadWriteString
+	case AccessReadOnly:
+		return AccessTypeReadOnlyString
+	case AccessWriteOnly:
+		return AccessTypeWriteOnlyString
+	case AccessNone:
+		return AccessTypeNoneString
+	default:
+		return ""
+	}
+}
+
+// MarshalJSON is used to serialize the instance of AccessType into JSON.
+func (a *AccessType) MarshalJSON() ([]byte, error) {
+	str := a.String()
+	if str == "" {
+		return nil, ErrInvalidAccessPermission
+	}
+
+	return json.Marshal(str)
+}
+
+// UnmarshalJSON is used to load an instance of AccessType into JSON.
+func (a *AccessType) UnmarshalJSON(data []byte) error {
+	var access string
+	if err := json.Unmarshal(data, &access); err != nil {
+		return err
+	}
+
+	switch access {
+	case AccessTypeReadWriteString:
+		*a = AccessReadWrite
+	case AccessTypeReadOnlyString:
+		*a = AccessReadOnly
+	case AccessTypeWriteOnlyString:
+		*a = AccessWriteOnly
+	case AccessTypeNoneString:
+		*a = AccessNone
+	default:
+		return ErrInvalidAccessPermission
+	}
+
+	return nil
+}
+
 // TargetsMetadata represents gittuf's rule files. Its name is inspired by TUF.
 type TargetsMetadata interface {
 	// SetExpires sets the expiry time for the metadata.
@@ -243,10 +365,10 @@ type TargetsMetadata interface {
 	GetRules() []Rule
 
 	// AddRule adds a rule to the metadata file.
-	AddRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int) error
+	AddRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType ScopeType, scope string, access AccessType) error
 	// UpdateRule updates an existing rule identified by ruleName with the
 	// provided parameters.
-	UpdateRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int) error
+	UpdateRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType ScopeType, scope string, access AccessType) error
 	// ReorderRules accepts the new order of rules (identified by their
 	// ruleNames).
 	ReorderRules(newRuleNames []string) error
@@ -281,6 +403,16 @@ type Rule interface {
 	// GetThreshold returns the threshold of principals that must approve to
 	// meet the rule.
 	GetThreshold() int
+
+	// GetScopeType returns the type of the scope of the rule.
+	GetScopeType() ScopeType
+
+	// GetScope returns the scope of the rule.
+	GetScope() string
+
+	// GetAccessType returns the type of access that the rule permits, e.g.
+	// read/write, read-only, or write-only.
+	GetAccessType() AccessType
 
 	// IsLastTrustedInRuleFile indicates that subsequent rules in the rule file
 	// are not to be trusted if the current rule matches the namespace under

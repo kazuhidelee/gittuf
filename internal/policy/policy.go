@@ -41,8 +41,8 @@ const (
 
 	metadataTreeEntryName = "metadata"
 
-	gitReferenceRuleScheme = "git"
-	fileRuleScheme         = "file"
+	GitReferenceRuleScheme = "git"
+	FileRuleScheme         = "file"
 )
 
 var (
@@ -296,6 +296,125 @@ func LoadFirstState(ctx context.Context, repo *gitinterface.Repository, opts ...
 	return LoadState(ctx, repo, firstEntry, opts...)
 }
 
+// DetermineIfInScope determines whether the specified commit
+func DetermineIfInScope(repo *gitinterface.Repository, commitHash gitinterface.Hash, newCommit bool, delegation tuf.Rule) bool {
+	switch delegation.GetScopeType() {
+	case tuf.ScopeAll:
+		return true
+	case tuf.ScopeLatestN:
+		// TODO
+		return true
+	case tuf.ScopeRange:
+		// TODO
+		return true
+	}
+	return false
+}
+
+// DetermineIfPathMustBeEncrypted determines whether the supplied path must
+// undergo encryption, according to the repository's read access control policy.
+// If the path must be encrypted, it returns a set of the principals that must
+// be granted read access to the data in the path.
+func (s *State) DetermineIfPathMustBeEncrypted(path string, commitHash gitinterface.Hash, newCommit bool) ([]tuf.Principal, error) {
+	// A path may need to undergo encryption for one of two reasons:
+	// A) if it has never been encrypted before, but the latest policy
+	// stipulates that it must now be encrypted
+	// B) if it has been encrypted, but its contents have been mutated
+	// We treat both cases the same, as a new symmetric key is derived either
+	// way.
+
+	if !s.HasTargetsRole(TargetsRoleName) {
+		return nil, nil
+	}
+
+	// This envelope is verified when state is loaded, as this is
+	// the start for all delegation graph searches
+	targetsMetadata, err := s.GetTargetsMetadata(TargetsRoleName, true) // migrating is fine since this is purely a query, let's start using tufv02 metadata
+	if err != nil {
+		return nil, err
+	}
+
+	//rootMetadata, err := s.GetRootMetadata(false)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	//rootPrincipals, err := rootMetadata.GetRootPrincipals()
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	allPrincipals := targetsMetadata.GetPrincipals()
+	// each entry is a list of delegations from a particular metadata file
+	groupedDelegations := [][]tuf.Rule{
+		targetsMetadata.GetRules(),
+	}
+
+	seenRoles := map[string]bool{TargetsRoleName: true}
+
+	var currentDelegationGroup []tuf.Rule
+	authorizedPrincipals := []tuf.Principal{}
+	for {
+		if len(groupedDelegations) == 0 {
+			return authorizedPrincipals, nil
+		}
+
+		currentDelegationGroup = groupedDelegations[0]
+		groupedDelegations = groupedDelegations[1:]
+
+		for len(currentDelegationGroup) > 1 {
+			// Exit condition: Only allow rule found in the current group
+			// => len(currentDelegationGroup) <= 1
+
+			delegation := currentDelegationGroup[0]
+			currentDelegationGroup = currentDelegationGroup[1:]
+
+			slog.Debug(fmt.Sprintf("Checking if delegation '%s' matches path '%s'...", delegation.GetProtectedNamespaces(), path))
+			if DetermineIfInScope(s.repository, commitHash, newCommit, delegation) && delegation.Matches(path) {
+				slog.Debug("It does!")
+				// For read access, the delegation must specify r+w or r access
+				switch delegation.GetAccessType() {
+				case tuf.AccessReadWrite, tuf.AccessReadOnly:
+					for _, principalID := range delegation.GetPrincipalIDs().Contents() {
+						slog.Debug(fmt.Sprintf("Adding principal '%s' as authorized to read path...", principalID))
+						authorizedPrincipals = append(authorizedPrincipals, allPrincipals[principalID])
+					}
+
+					//for _, principal := range rootPrincipals {
+					//	slog.Debug(fmt.Sprintf("Adding root principal '%s' as authorized to read path...", principal.ID()))
+					//	authorizedPrincipals = append(authorizedPrincipals, principal)
+					//}
+				default:
+					continue
+				}
+
+				if s.HasTargetsRole(delegation.ID()) {
+					delegatedMetadata, err := s.GetTargetsMetadata(delegation.ID(), true) // migrating is fine since this is purely a query, let's start using tufv02 metadata
+					if err != nil {
+						return nil, err
+					}
+
+					seenRoles[delegation.ID()] = true
+
+					for principalID, principal := range delegatedMetadata.GetPrincipals() {
+						allPrincipals[principalID] = principal
+					}
+
+					// Add the current metadata's further delegations upfront to
+					// be depth-first
+					groupedDelegations = append([][]tuf.Rule{delegatedMetadata.GetRules()}, groupedDelegations...)
+
+					if delegation.IsLastTrustedInRuleFile() {
+						// Stop processing current delegation group, but proceed
+						// with other groups
+						break
+					}
+				}
+			}
+		}
+	}
+}
+
 // FindVerifiersForPath identifies the trusted set of verifiers for the
 // specified path. While walking the delegation graph for the path, signatures
 // for delegated metadata files are verified using the verifier context.
@@ -392,16 +511,22 @@ func (s *State) findVerifiersForPathIfProtected(path string) ([]*SignatureVerifi
 			currentDelegationGroup = currentDelegationGroup[1:]
 
 			if delegation.Matches(path) {
-				verifier := &SignatureVerifier{
-					repository: s.repository,
-					name:       delegation.ID(),
-					principals: make([]tuf.Principal, 0, delegation.GetPrincipalIDs().Len()),
-					threshold:  delegation.GetThreshold(),
+				// For write access, the delegation must specify r+w or w access
+				switch delegation.GetAccessType() {
+				case tuf.AccessReadWrite, tuf.AccessWriteOnly:
+					verifier := &SignatureVerifier{
+						repository: s.repository,
+						name:       delegation.ID(),
+						principals: make([]tuf.Principal, 0, delegation.GetPrincipalIDs().Len()),
+						threshold:  delegation.GetThreshold(),
+					}
+					for _, principalID := range delegation.GetPrincipalIDs().Contents() {
+						verifier.principals = append(verifier.principals, allPrincipals[principalID])
+					}
+					verifiers = append(verifiers, verifier)
+				default:
+					continue
 				}
-				for _, principalID := range delegation.GetPrincipalIDs().Contents() {
-					verifier.principals = append(verifier.principals, allPrincipals[principalID])
-				}
-				verifiers = append(verifiers, verifier)
 
 				if _, seen := seenRoles[delegation.ID()]; seen {
 					continue
@@ -1195,7 +1320,7 @@ func (s *State) preprocess() error {
 		if !s.hasFileRule {
 			patterns := rule.GetProtectedNamespaces()
 			for _, pattern := range patterns {
-				if strings.HasPrefix(pattern, fileRuleScheme) {
+				if strings.HasPrefix(pattern, FileRuleScheme) {
 					s.hasFileRule = true
 					break
 				}
@@ -1228,7 +1353,7 @@ func (s *State) preprocess() error {
 				if !s.hasFileRule {
 					patterns := rule.GetProtectedNamespaces()
 					for _, pattern := range patterns {
-						if strings.HasPrefix(pattern, fileRuleScheme) {
+						if strings.HasPrefix(pattern, FileRuleScheme) {
 							s.hasFileRule = true
 							break
 						}

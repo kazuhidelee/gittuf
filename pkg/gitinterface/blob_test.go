@@ -48,3 +48,16 @@ func TestRepositoryWriteBlob(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expectedBlobID, blobID)
 }
+
+func TestRepositoryHashBlob(t *testing.T) {
+	tempDir := t.TempDir()
+	repo := CreateTestGitRepository(t, tempDir, false)
+
+	contents := []byte("test file write")
+	expectedBlobID, err := NewHash("999c05e9578e5d244920306842f516789a2498f7")
+	require.Nil(t, err)
+
+	blobID, err := repo.WriteBlob(contents)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedBlobID, blobID)
+}

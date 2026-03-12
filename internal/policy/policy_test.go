@@ -49,7 +49,7 @@ func TestLoadState(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := targetsMetadata.AddRule("test-rule-1", []string{key.KeyID}, []string{"test-rule-1"}, 1); err != nil {
+		if err := targetsMetadata.AddRule("test-rule-1", []string{key.KeyID}, []string{"test-rule-1"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil {
 			t.Fatal(err)
 		}
 		state.ruleNames.Add("test-rule-1")
@@ -74,7 +74,7 @@ func TestLoadState(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := targetsMetadata.AddRule("test-rule-2", []string{key.KeyID}, []string{"test-rule-2"}, 1); err != nil {
+		if err := targetsMetadata.AddRule("test-rule-2", []string{key.KeyID}, []string{"test-rule-2"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil {
 			t.Fatal(err)
 		}
 		state.ruleNames.Add("test-rule-2")
@@ -138,7 +138,7 @@ func TestLoadState(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := targetsMetadata.AddRule("test-rule-1", []string{key.KeyID}, []string{"test-rule-1"}, 1); err != nil {
+		if err := targetsMetadata.AddRule("test-rule-1", []string{key.KeyID}, []string{"test-rule-1"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil {
 			t.Fatal(err)
 		}
 		state.ruleNames.Add("test-rule-1")
@@ -163,7 +163,7 @@ func TestLoadState(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := targetsMetadata.AddRule("test-rule-2", []string{key.KeyID}, []string{"test-rule-2"}, 1); err != nil {
+		if err := targetsMetadata.AddRule("test-rule-2", []string{key.KeyID}, []string{"test-rule-2"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil {
 			t.Fatal(err)
 		}
 		state.ruleNames.Add("test-rule-2")
@@ -282,7 +282,7 @@ func TestLoadFirstState(t *testing.T) {
 	if err := targetsMetadata.AddPrincipal(key); err != nil {
 		t.Fatal(err)
 	}
-	if err := targetsMetadata.AddRule("new-rule", []string{key.KeyID}, []string{"*"}, 1); err != nil { // just a dummy rule
+	if err := targetsMetadata.AddRule("new-rule", []string{key.KeyID}, []string{"*"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil { // just a dummy rule
 		t.Fatal(err)
 	}
 
@@ -1015,7 +1015,7 @@ func TestDiscard(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := targetsMetadata.AddRule("test-rule", []string{key.KeyID}, []string{"test-rule"}, 1); err != nil {
+		if err := targetsMetadata.AddRule("test-rule", []string{key.KeyID}, []string{"test-rule"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite); err != nil {
 			t.Fatal(err)
 		}
 

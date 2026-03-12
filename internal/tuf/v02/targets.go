@@ -58,7 +58,7 @@ func (t *TargetsMetadata) Validate() error {
 }
 
 // AddRule adds a new delegation to TargetsMetadata.
-func (t *TargetsMetadata) AddRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int) error {
+func (t *TargetsMetadata) AddRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType tuf.ScopeType, scope string, access tuf.AccessType) error {
 	if strings.HasPrefix(ruleName, tuf.GittufPrefix) {
 		return tuf.ErrCannotManipulateRulesWithGittufPrefix
 	}
@@ -81,6 +81,9 @@ func (t *TargetsMetadata) AddRule(ruleName string, authorizedPrincipalIDs, ruleP
 	newDelegation := &Delegation{
 		Name:        ruleName,
 		Paths:       rulePatterns,
+		ScopeType:   scopeType,
+		Scope:       scope,
+		Access:      access,
 		Terminating: false,
 		Role: Role{
 			PrincipalIDs: set.NewSetFromItems(authorizedPrincipalIDs...),
@@ -93,7 +96,7 @@ func (t *TargetsMetadata) AddRule(ruleName string, authorizedPrincipalIDs, ruleP
 }
 
 // UpdateRule is used to amend a delegation in TargetsMetadata.
-func (t *TargetsMetadata) UpdateRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int) error {
+func (t *TargetsMetadata) UpdateRule(ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType tuf.ScopeType, scope string, access tuf.AccessType) error {
 	if strings.HasPrefix(ruleName, tuf.GittufPrefix) {
 		return tuf.ErrCannotManipulateRulesWithGittufPrefix
 	}
@@ -121,6 +124,9 @@ func (t *TargetsMetadata) UpdateRule(ruleName string, authorizedPrincipalIDs, ru
 
 		if delegation.Name == ruleName {
 			delegation.Paths = rulePatterns
+			delegation.ScopeType = scopeType
+			delegation.Scope = scope
+			delegation.Access = access
 			delegation.Role = Role{
 				PrincipalIDs: set.NewSetFromItems(authorizedPrincipalIDs...),
 				Threshold:    threshold,
@@ -365,6 +371,8 @@ func AllowRule() *Delegation {
 	return &Delegation{
 		Name:        tuf.AllowRuleName,
 		Paths:       []string{"*"},
+		ScopeType:   tuf.ScopeAll,
+		Access:      tuf.AccessReadWrite,
 		Terminating: true,
 		Role: Role{
 			Threshold: 1,
@@ -378,6 +386,9 @@ func AllowRule() *Delegation {
 type Delegation struct {
 	Name        string           `json:"name"`
 	Paths       []string         `json:"paths"`
+	ScopeType   tuf.ScopeType    `json:"scopeType,omitempty"`
+	Scope       string           `json:"scope,omitempty"`
+	Access      tuf.AccessType   `json:"access"`
 	Terminating bool             `json:"terminating"`
 	Custom      *json.RawMessage `json:"custom,omitempty"`
 	Role
@@ -409,6 +420,20 @@ func (d *Delegation) GetPrincipalIDs() *set.Set[string] {
 // the rule.
 func (d *Delegation) GetThreshold() int {
 	return d.Threshold
+}
+
+func (d *Delegation) GetScopeType() tuf.ScopeType {
+	return d.ScopeType
+}
+
+func (d *Delegation) GetScope() string {
+	return d.Scope
+}
+
+// GetAccessType returns the type of access that the rule permits, e.g.
+// read/write, read-only, or write-only.
+func (d *Delegation) GetAccessType() tuf.AccessType {
+	return d.Access
 }
 
 // IsLastTrustedInRuleFile indicates that subsequent rules in the rule file are

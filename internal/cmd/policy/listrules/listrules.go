@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/gittuf/gittuf/experimental/gittuf"
+	"github.com/gittuf/gittuf/internal/tuf"
+	v02 "github.com/gittuf/gittuf/internal/tuf/v02"
 	"github.com/spf13/cobra"
 )
 
@@ -67,9 +69,22 @@ func (o *options) Run(cmd *cobra.Command, _ []string) error {
 		}
 
 		fmt.Println(strings.Repeat("    ", curRule.Depth+1) + fmt.Sprintf("Required valid signatures: %d", curRule.Delegation.GetThreshold()))
+
+		if d, ok := any(curRule.Delegation).(*v02.Delegation); ok {
+			fmt.Println(strings.Repeat("    ", curRule.Depth+1) +
+				fmt.Sprintf("Scope Type: %s", d.ScopeType))
+			if d.ScopeType == tuf.ScopeLatestN {
+				fmt.Println(strings.Repeat("    ", curRule.Depth+1) +
+					fmt.Sprintf("Scope Value: %d", d.Scope))
+			}
+			accessType := curRule.Delegation.GetAccessType()
+			fmt.Println(strings.Repeat("    ", curRule.Depth+1) + fmt.Sprintf("Access type authorized: %s", accessType.String()))
+		}
+
 		if i < len(rules)-1 {
 			fmt.Println()
 		}
+
 	}
 	return nil
 }

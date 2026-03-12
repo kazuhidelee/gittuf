@@ -90,7 +90,7 @@ func (r *Repository) InitializeTargets(ctx context.Context, signer sslibdsse.Sig
 
 // AddDelegation is the interface for the user to add a new rule to gittuf
 // policy.
-func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerVerifier, targetsRoleName string, ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, signCommit bool, opts ...trustpolicyopts.Option) error {
+func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerVerifier, targetsRoleName string, ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType tuf.ScopeType, scope string, access tuf.AccessType, signCommit bool, opts ...trustpolicyopts.Option) error {
 	if ruleName == policy.RootRoleName {
 		return ErrInvalidPolicyName
 	}
@@ -140,7 +140,8 @@ func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerV
 	}
 
 	slog.Debug("Adding rule to rule file...")
-	if err := targetsMetadata.AddRule(ruleName, authorizedPrincipalIDs, rulePatterns, threshold); err != nil {
+	if err := targetsMetadata.AddRule(ruleName, authorizedPrincipalIDs, rulePatterns, threshold, scopeType, scope,
+		access); err != nil {
 		return err
 	}
 
@@ -169,7 +170,7 @@ func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerV
 
 // UpdateDelegation is the interface for the user to update a rule to gittuf
 // policy.
-func (r *Repository) UpdateDelegation(ctx context.Context, signer sslibdsse.SignerVerifier, targetsRoleName string, ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, signCommit bool, opts ...trustpolicyopts.Option) error {
+func (r *Repository) UpdateDelegation(ctx context.Context, signer sslibdsse.SignerVerifier, targetsRoleName string, ruleName string, authorizedPrincipalIDs, rulePatterns []string, threshold int, scopeType tuf.ScopeType, scope string, access tuf.AccessType, signCommit bool, opts ...trustpolicyopts.Option) error {
 	if ruleName == policy.RootRoleName {
 		return ErrInvalidPolicyName
 	}
@@ -214,7 +215,7 @@ func (r *Repository) UpdateDelegation(ctx context.Context, signer sslibdsse.Sign
 	}
 
 	slog.Debug("Updating rule in rule file...")
-	if err := targetsMetadata.UpdateRule(ruleName, authorizedPrincipalIDs, rulePatterns, threshold); err != nil {
+	if err := targetsMetadata.UpdateRule(ruleName, authorizedPrincipalIDs, rulePatterns, threshold, scopeType, scope, access); err != nil {
 		return err
 	}
 

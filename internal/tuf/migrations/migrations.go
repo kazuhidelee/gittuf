@@ -102,6 +102,7 @@ func MigrateTargetsMetadataV01ToV02(targetsMetadata *tufv01.TargetsMetadata) *tu
 		newRole := &tufv02.Delegation{
 			Name:        role.Name,
 			Paths:       role.Paths,
+			Access:      role.Access,
 			Terminating: role.Terminating,
 			Custom:      role.Custom,
 			Role: tufv02.Role{

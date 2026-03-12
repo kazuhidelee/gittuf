@@ -86,3 +86,26 @@ func (r *Repository) GetFilePathsChangedByCommit(commitID Hash) ([]string, error
 	paths := strings.Split(stdOut, "\n")
 	return paths, nil
 }
+
+// GetFilePathsChangedSinceLastCommit returns the paths currently changed since
+// the last commit. This is composed of the files currently not staged for
+// commit, and optionally, files that have been staged for commit.
+func (r *Repository) GetFilePathsChangedSinceLastCommit(includeStaged bool) ([]string, error) {
+	args := []string{"diff", "--name-only"}
+
+	if includeStaged {
+		args = append(args, "--cached")
+	}
+
+	stdOut, err := r.executor(args...).executeString()
+	if err != nil {
+		return nil, err
+	}
+
+	if stdOut == "" {
+		return nil, nil
+	}
+
+	paths := strings.Split(stdOut, "\n")
+	return paths, nil
+}

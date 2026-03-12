@@ -262,7 +262,7 @@ func TestAddRuleAndGetRules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := targetsMetadata.AddRule("test-rule", []string{key1.KeyID, key2.KeyID, person.PersonID}, []string{"test/"}, 1)
+	err := targetsMetadata.AddRule("test-rule", []string{key1.KeyID, key2.KeyID, person.PersonID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	assert.Nil(t, err)
 	assert.Contains(t, targetsMetadata.Delegations.Principals, key1.KeyID)
 	assert.Equal(t, key1, targetsMetadata.Delegations.Principals[key1.KeyID])
@@ -275,6 +275,8 @@ func TestAddRuleAndGetRules(t *testing.T) {
 	rule := &Delegation{
 		Name:        "test-rule",
 		Paths:       []string{"test/"},
+		ScopeType:   tuf.ScopeAll,
+		Access:      tuf.AccessReadWrite,
 		Terminating: false,
 		Role:        Role{PrincipalIDs: set.NewSetFromItems(key1.KeyID, key2.KeyID, person.PersonID), Threshold: 1},
 	}
@@ -294,7 +296,7 @@ func TestUpdateDelegation(t *testing.T) {
 	if err := targetsMetadata.AddPrincipal(key1); err != nil {
 		t.Fatal(err)
 	}
-	err := targetsMetadata.AddRule("test-rule", []string{key1.KeyID}, []string{"test/"}, 1)
+	err := targetsMetadata.AddRule("test-rule", []string{key1.KeyID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,6 +306,8 @@ func TestUpdateDelegation(t *testing.T) {
 	assert.Equal(t, &Delegation{
 		Name:        "test-rule",
 		Paths:       []string{"test/"},
+		ScopeType:   tuf.ScopeAll,
+		Access:      tuf.AccessReadWrite,
 		Terminating: false,
 		Role:        Role{PrincipalIDs: set.NewSetFromItems(key1.KeyID), Threshold: 1},
 	}, targetsMetadata.Delegations.Roles[0])
@@ -311,7 +315,7 @@ func TestUpdateDelegation(t *testing.T) {
 	if err := targetsMetadata.AddPrincipal(key2); err != nil {
 		t.Fatal(err)
 	}
-	err = targetsMetadata.UpdateRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1)
+	err = targetsMetadata.UpdateRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	assert.Nil(t, err)
 	assert.Contains(t, targetsMetadata.Delegations.Principals, key1.KeyID)
 	assert.Equal(t, key1, targetsMetadata.Delegations.Principals[key1.KeyID])
@@ -321,6 +325,8 @@ func TestUpdateDelegation(t *testing.T) {
 	assert.Equal(t, &Delegation{
 		Name:        "test-rule",
 		Paths:       []string{"test/"},
+		ScopeType:   tuf.ScopeAll,
+		Access:      tuf.AccessReadWrite,
 		Terminating: false,
 		Role:        Role{PrincipalIDs: set.NewSetFromItems(key1.KeyID, key2.KeyID), Threshold: 1},
 	}, targetsMetadata.Delegations.Roles[0])
@@ -339,17 +345,17 @@ func TestReorderRules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := targetsMetadata.AddRule("rule-1", []string{key1.KeyID}, []string{"path1/"}, 1)
+	err := targetsMetadata.AddRule("rule-1", []string{key1.KeyID}, []string{"path1/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = targetsMetadata.AddRule("rule-2", []string{key2.KeyID}, []string{"path2/"}, 1)
+	err = targetsMetadata.AddRule("rule-2", []string{key2.KeyID}, []string{"path2/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = targetsMetadata.AddRule("rule-3", []string{key1.KeyID, key2.KeyID}, []string{"path3/"}, 1)
+	err = targetsMetadata.AddRule("rule-3", []string{key1.KeyID, key2.KeyID}, []string{"path3/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +418,7 @@ func TestRemoveRule(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := targetsMetadata.AddRule("test-rule", []string{key.KeyID}, []string{"test/"}, 1)
+	err := targetsMetadata.AddRule("test-rule", []string{key.KeyID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
 	if err != nil {
 		t.Fatal(err)
 	}

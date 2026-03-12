@@ -91,7 +91,7 @@ func createTestRepositoryWithPolicy(t *testing.T, location string) *Repository {
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID}, []string{"git:refs/heads/main"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID}, []string{"git:refs/heads/main"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -130,12 +130,12 @@ func createTestRepositoryWithPolicyWithFileRule(t *testing.T, location string) *
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID}, []string{"git:refs/heads/main"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID}, []string{"git:refs/heads/main"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
 	// Add a file protection rule. When used with common.AddNTestCommitsToSpecifiedRef, we have files with names 1, 2, 3,...n.
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-files-1-and-2", []string{gpgKey.KeyID}, []string{"file:1", "file:2"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-files-1-and-2", []string{gpgKey.KeyID}, []string{"file:1", "file:2"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -175,15 +175,15 @@ func createTestRepositoryWithDelegatedPolicies(t *testing.T, location string) *R
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-file-1", []string{rootKey.KeyID}, []string{"file:1"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-file-1", []string{rootKey.KeyID}, []string{"file:1"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "1", []string{rootKey.KeyID}, []string{"file:1/*"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "1", []string{rootKey.KeyID}, []string{"file:1/*"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "2", []string{rootKey.KeyID}, []string{"file:2/*"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "2", []string{rootKey.KeyID}, []string{"file:2/*"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -196,11 +196,11 @@ func createTestRepositoryWithDelegatedPolicies(t *testing.T, location string) *R
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, rootSigner, "protect-file-1", "3", []string{gpgKey.KeyID}, []string{"file:1/subpath1/*"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, rootSigner, "protect-file-1", "3", []string{gpgKey.KeyID}, []string{"file:1/subpath1/*"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := r.AddDelegation(testCtx, rootSigner, "protect-file-1", "4", []string{gpgKey.KeyID}, []string{"file:1/subpath2/*"}, 1, false, trustpolicyopts.WithRSLEntry()); err != nil {
+	if err := r.AddDelegation(testCtx, rootSigner, "protect-file-1", "4", []string{gpgKey.KeyID}, []string{"file:1/subpath2/*"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false, trustpolicyopts.WithRSLEntry()); err != nil {
 		t.Fatal(err)
 	}
 

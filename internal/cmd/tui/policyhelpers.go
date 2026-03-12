@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gittuf/gittuf/experimental/gittuf"
+	"github.com/gittuf/gittuf/internal/tuf"
 )
 
 type rule struct {
@@ -60,7 +61,7 @@ func repoAddRule(o *options, rule rule, keyPath []string) error {
 
 		authorizedPrincipalIDs = append(authorizedPrincipalIDs, key.ID())
 	}
-	res := repo.AddDelegation(context.Background(), signer, o.policyName, rule.name, authorizedPrincipalIDs, []string{rule.pattern}, 1, true)
+	res := repo.AddDelegation(context.Background(), signer, o.policyName, rule.name, authorizedPrincipalIDs, []string{rule.pattern}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, true)
 
 	return res
 }

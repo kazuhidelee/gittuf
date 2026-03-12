@@ -5,9 +5,12 @@ package gitinterface
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetFilePathsChangedByCommitRepository(t *testing.T) {
@@ -339,5 +342,56 @@ func TestGetFilePathsChangedByCommitRepository(t *testing.T) {
 		diffs, err := repo.GetFilePathsChangedByCommit(cM)
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"a"}, diffs)
+	})
+}
+
+func TestGetFilePathsChangedSinceLastCommit(t *testing.T) {
+	tmpDir := t.TempDir()
+	repo := CreateTestGitRepository(t, tmpDir, false)
+
+	treeBuilder := NewTreeBuilder(repo)
+
+	blobID, err := repo.WriteBlob([]byte(fmt.Sprintf("test_data")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	treeHash, err := treeBuilder.WriteTreeFromEntries([]TreeEntry{NewEntryBlob("a", blobID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Commit(treeHash, "refs/heads/main", "Test commit\n", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("include staged", func(t *testing.T) {
+		paths, err := repo.GetFilePathsChangedSinceLastCommit(true)
+		assert.Nil(t, err)
+		assert.Len(t, paths, 1)
+		assert.Equal(t, "a", paths[0])
+
+		err = os.WriteFile(filepath.Join(tmpDir, "test_file"), []byte("test_data"), 0644)
+		require.Nil(t, err)
+
+		paths, err = repo.GetFilePathsChangedSinceLastCommit(true)
+		assert.Nil(t, err)
+		assert.Len(t, paths, 1)
+		assert.Equal(t, "a", paths[0])
+
+		_, err = repo.executor("add", "test_file").executeString()
+		require.Nil(t, err)
+
+		paths, err = repo.GetFilePathsChangedSinceLastCommit(true)
+		assert.Nil(t, err)
+		assert.Len(t, paths, 1)
+		assert.Equal(t, "test_file", paths[0])
+	})
+
+	t.Run("exclude staged", func(t *testing.T) {
+		paths, err := repo.GetFilePathsChangedSinceLastCommit(false)
+		assert.Nil(t, err)
+		assert.Nil(t, paths)
 	})
 }

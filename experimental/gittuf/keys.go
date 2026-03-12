@@ -4,16 +4,22 @@
 package gittuf
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/gittuf/gittuf/internal/readaccess"
 	"github.com/gittuf/gittuf/internal/signerverifier/gpg"
 	"github.com/gittuf/gittuf/internal/signerverifier/sigstore"
 	sigstoresigneropts "github.com/gittuf/gittuf/internal/signerverifier/sigstore/options/signer"
 	"github.com/gittuf/gittuf/internal/signerverifier/ssh"
 	sslibdsse "github.com/gittuf/gittuf/internal/third_party/go-securesystemslib/dsse"
+	sslibed "github.com/gittuf/gittuf/internal/third_party/go-securesystemslib/encrypterdecrypter"
+	sslibeda "github.com/gittuf/gittuf/internal/third_party/go-securesystemslib/encrypterdecrypter/asymmetric"
+	isv "github.com/gittuf/gittuf/internal/third_party/go-securesystemslib/signerverifier"
 	"github.com/gittuf/gittuf/internal/tuf"
 	tufv01 "github.com/gittuf/gittuf/internal/tuf/v01"
 	"github.com/secure-systems-lab/go-securesystemslib/signerverifier"
@@ -120,6 +126,51 @@ func LoadSigner(repo *Repository, key string) (sslibdsse.SignerVerifier, error) 
 	}
 }
 
+// LoadEncrypterDecrypter loads an encrypterdecrypter for the specified key
+// bytes. Currently, the key must be an SSH key, where the `key` is a path
+// to the private key.
+func LoadEncrypterDecrypter(repo *Repository, key string) (sslibed.EncrypterDecrypter, error) {
+	// Load an SSH signer from the specified key
+	sslKey, err := ssh.NewKeyFromFile(key)
+	if err != nil {
+		return nil, err
+	}
+
+	decodedPublicBytes, err := base64.StdEncoding.DecodeString(sslKey.KeyVal.Public)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedPublicKey, err := readaccess.ParseSSHPublicKey(decodedPublicBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load in the private key encoded as PEM
+	privateKeyBytes, err := os.ReadFile(key)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedPrivateKey, err := signerverifier.LoadKey(privateKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	convertedKey := &isv.SSLibKey{
+		KeyID:  sslKey.KeyID,
+		Scheme: sslKey.Scheme,
+		KeyVal: isv.KeyVal{
+			Private: parsedPrivateKey.KeyVal.Private,
+			Public:  string(parsedPublicKey),
+		},
+		KeyType:             sslKey.KeyType,
+		KeyIDHashAlgorithms: sslKey.KeyIDHashAlgorithms,
+	}
+
+	return sslibeda.NewRSAEncrypterDecrypterFromSSLibKey(convertedKey)
+}
+
 // LoadSignerFromGitConfig loads a metadata signer for the signing key specified
 // in the Git configuration of the target repository.
 func LoadSignerFromGitConfig(repo *Repository) (sslibdsse.SignerVerifier, error) {
@@ -200,4 +251,11 @@ func getSigstoreOptions(config map[string]string) []sigstoresigneropts.Option {
 		opts = append(opts, sigstoresigneropts.WithRedirectURL(value))
 	}
 	return opts
+}
+
+// LoadEncrypterDecrypterFromGitConfig loads an sslib encrypterdecrypter for the
+// key specified in the Git configuration of the target repository.
+func LoadEncrypterDecrypterFromGitConfig(repo *Repository) (sslibed.EncrypterDecrypter, error) {
+	//TODO
+	return LoadEncrypterDecrypter(repo, "")
 }

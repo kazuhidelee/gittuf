@@ -16,6 +16,7 @@ import (
 	"github.com/gittuf/gittuf/internal/cmd/policy"
 	"github.com/gittuf/gittuf/internal/cmd/policy/persistent"
 	"github.com/gittuf/gittuf/internal/cmd/profile"
+	"github.com/gittuf/gittuf/internal/cmd/readaccess"
 	"github.com/gittuf/gittuf/internal/cmd/rsl"
 	"github.com/gittuf/gittuf/internal/cmd/sync"
 	"github.com/gittuf/gittuf/internal/cmd/trust"
@@ -119,6 +120,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(dev.New())
 	cmd.AddCommand(trust.New())
 	cmd.AddCommand(policy.New())
+	cmd.AddCommand(readaccess.New())
 	cmd.AddCommand(rsl.New())
 	cmd.AddCommand(sync.New())
 	cmd.AddCommand(verifymergeable.New())

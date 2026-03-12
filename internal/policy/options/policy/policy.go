@@ -23,3 +23,6 @@ func BypassRSL() LoadStateOption {
 		o.BypassRSL = true
 	}
 }
+
+type ScopeOptions struct {
+}

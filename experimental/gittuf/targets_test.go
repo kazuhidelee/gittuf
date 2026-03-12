@@ -91,7 +91,7 @@ func TestAddDelegation(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsPubKey.KeyID}, rulePatterns, 1, false)
+		err = r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsPubKey.KeyID}, rulePatterns, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false)
 		assert.Nil(t, err)
 
 		err = r.StagePolicy(testCtx, "", true, false)
@@ -120,7 +120,7 @@ func TestAddDelegation(t *testing.T) {
 	t.Run("invalid rule name", func(t *testing.T) {
 		r := createTestRepositoryWithPolicy(t, "")
 
-		err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, policy.RootRoleName, nil, nil, 1, false)
+		err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, policy.RootRoleName, nil, nil, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false)
 		assert.ErrorIs(t, err, ErrInvalidPolicyName)
 	})
 }
@@ -141,7 +141,7 @@ func TestUpdateDelegation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.UpdateDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID, targetsKey.KeyID}, []string{"git:refs/heads/main"}, 1, false)
+	err = r.UpdateDelegation(testCtx, targetsSigner, policy.TargetsRoleName, "protect-main", []string{gpgKey.KeyID, targetsKey.KeyID}, []string{"git:refs/heads/main"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false)
 	assert.Nil(t, err)
 
 	err = r.StagePolicy(testCtx, "", true, false)
@@ -178,7 +178,7 @@ func TestReorderDelegations(t *testing.T) {
 
 	ruleNames := []string{"rule-1", "rule-2", "rule-3"}
 	for _, ruleName := range ruleNames {
-		err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsKey.KeyID}, []string{ruleName}, 1, false)
+		err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsKey.KeyID}, []string{ruleName}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -226,7 +226,7 @@ func TestRemoveDelegation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsPubKey.KeyID}, rulePatterns, 1, false)
+	err := r.AddDelegation(testCtx, targetsSigner, policy.TargetsRoleName, ruleName, []string{targetsPubKey.KeyID}, rulePatterns, 1, tuf.ScopeAll, "", tuf.AccessReadWrite, false)
 	assert.Nil(t, err)
 
 	err = r.StagePolicy(testCtx, "", true, false)

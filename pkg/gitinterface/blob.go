@@ -42,3 +42,20 @@ func (r *Repository) WriteBlob(contents []byte) (Hash, error) {
 
 	return hash, nil
 }
+
+// HashBlob computes the ID of the given blob, but does not commit the given
+// contents to the repository.
+func (r *Repository) HashBlob(contents []byte) (Hash, error) {
+	stdInBuf := bytes.NewBuffer(contents)
+	objID, err := r.executor("hash-object", "-t", "blob", "--stdin").withStdIn(stdInBuf).executeString()
+	if err != nil {
+		return ZeroHash, fmt.Errorf("unable to write blob: %w", err)
+	}
+
+	hash, err := NewHash(objID)
+	if err != nil {
+		return ZeroHash, fmt.Errorf("invalid Git ID for blob: %w", err)
+	}
+
+	return hash, nil
+}
