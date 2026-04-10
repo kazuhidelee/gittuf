@@ -40,11 +40,6 @@ func (r *Repository) InitializeTargets(ctx context.Context, signer sslibdsse.Sig
 		fn(options)
 	}
 
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
-	}
-
 	slog.Debug("Loading current policy...")
 	state, err := policy.LoadCurrentState(ctx, r.r, policy.PolicyStagingRef, policyopts.BypassRSL())
 	if err != nil {
@@ -67,7 +62,7 @@ func (r *Repository) InitializeTargets(ctx context.Context, signer sslibdsse.Sig
 		return err
 	}
 
-	slog.Debug(fmt.Sprintf("Signing initial rule file using '%s'...", keyID))
+	slog.Debug("Signing initial rule file...")
 	env, err = dsse.SignEnvelope(ctx, env, signer)
 	if err != nil {
 		return err
@@ -108,11 +103,6 @@ func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerV
 		fn(options)
 	}
 
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
-	}
-
 	slog.Debug("Loading current policy...")
 	state, err := policy.LoadCurrentState(ctx, r.r, policy.PolicyStagingRef, policyopts.BypassRSL())
 	if err != nil {
@@ -145,27 +135,8 @@ func (r *Repository) AddDelegation(ctx context.Context, signer sslibdsse.SignerV
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Add rule '%s' to policy '%s'", ruleName, targetsRoleName)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // UpdateDelegation is the interface for the user to update a rule to gittuf
@@ -186,11 +157,6 @@ func (r *Repository) UpdateDelegation(ctx context.Context, signer sslibdsse.Sign
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
 	}
 
 	slog.Debug("Loading current policy...")
@@ -219,27 +185,8 @@ func (r *Repository) UpdateDelegation(ctx context.Context, signer sslibdsse.Sign
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Update rule '%s' in policy '%s'", ruleName, targetsRoleName)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // ReorderDelegations is the interface for the user to reorder rules in gittuf
@@ -256,11 +203,6 @@ func (r *Repository) ReorderDelegations(ctx context.Context, signer sslibdsse.Si
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return nil
 	}
 
 	slog.Debug("Loading current policy...")
@@ -284,27 +226,8 @@ func (r *Repository) ReorderDelegations(ctx context.Context, signer sslibdsse.Si
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Reorder rules in policy '%s'", targetsRoleName)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // RemoveDelegation is the interface for a user to remove a rule from gittuf
@@ -321,11 +244,6 @@ func (r *Repository) RemoveDelegation(ctx context.Context, signer sslibdsse.Sign
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
 	}
 
 	slog.Debug("Loading current policy...")
@@ -354,27 +272,8 @@ func (r *Repository) RemoveDelegation(ctx context.Context, signer sslibdsse.Sign
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Remove rule '%s' from policy '%s'", ruleName, targetsRoleName)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // AddPrincipalToTargets is the interface for a user to add a trusted principal
@@ -391,11 +290,6 @@ func (r *Repository) AddPrincipalToTargets(ctx context.Context, signer sslibdsse
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
 	}
 
 	slog.Debug("Loading current policy...")
@@ -430,27 +324,8 @@ func (r *Repository) AddPrincipalToTargets(ctx context.Context, signer sslibdsse
 		}
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Add principals to policy '%s'\n%s", targetsRoleName, principalIDs)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // UpdatePrincipalInTargets is the interface for a user to update a principal's
@@ -467,11 +342,6 @@ func (r *Repository) UpdatePrincipalInTargets(ctx context.Context, signer sslibd
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
 	}
 
 	slog.Debug("Loading current policy...")
@@ -494,27 +364,8 @@ func (r *Repository) UpdatePrincipalInTargets(ctx context.Context, signer sslibd
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Update principal '%s' in policy '%s'", principal.ID(), targetsRoleName)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // RemovePrincipalFromTargets is the interface for a user to remove a principal
@@ -531,11 +382,6 @@ func (r *Repository) RemovePrincipalFromTargets(ctx context.Context, signer ssli
 	options := &trustpolicyopts.Options{}
 	for _, fn := range opts {
 		fn(options)
-	}
-
-	keyID, err := signer.KeyID()
-	if err != nil {
-		return err
 	}
 
 	slog.Debug("Loading current policy...")
@@ -558,27 +404,8 @@ func (r *Repository) RemovePrincipalFromTargets(ctx context.Context, signer ssli
 		return err
 	}
 
-	env, err := dsse.CreateEnvelope(targetsMetadata)
-	if err != nil {
-		return err
-	}
-
-	slog.Debug(fmt.Sprintf("Signing updated rule file using '%s'...", keyID))
-	env, err = dsse.SignEnvelope(ctx, env, signer)
-	if err != nil {
-		return err
-	}
-
-	if targetsRoleName == policy.TargetsRoleName {
-		state.Metadata.TargetsEnvelope = env
-	} else {
-		state.Metadata.DelegationEnvelopes[targetsRoleName] = env
-	}
-
 	commitMessage := fmt.Sprintf("Remove principal from policy '%s'\n%s", targetsRoleName, principalID)
-
-	slog.Debug("Committing policy...")
-	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+	return r.updateTargetsMetadata(ctx, state, signer, targetsRoleName, targetsMetadata, commitMessage, options.CreateRSLEntry, signCommit)
 }
 
 // SignTargets adds a signature to specified Targets role's envelope. Note that
@@ -634,4 +461,28 @@ func (r *Repository) SignTargets(ctx context.Context, signer sslibdsse.SignerVer
 
 	slog.Debug("Committing policy...")
 	return state.Commit(r.r, commitMessage, options.CreateRSLEntry, signCommit)
+}
+
+func (r *Repository) updateTargetsMetadata(ctx context.Context, state *policy.State, signer sslibdsse.SignerVerifier, targetsMetadataName string, targetsMetadata tuf.TargetsMetadata, commitMessage string, createRSLEntry, signCommit bool) error {
+	targetsMetadata.IncrementVersion()
+
+	env, err := dsse.CreateEnvelope(targetsMetadata)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("Signing updated rule file...")
+	env, err = dsse.SignEnvelope(ctx, env, signer)
+	if err != nil {
+		return err
+	}
+
+	if targetsMetadataName == policy.TargetsRoleName {
+		state.Metadata.TargetsEnvelope = env
+	} else {
+		state.Metadata.DelegationEnvelopes[targetsMetadataName] = env
+	}
+
+	slog.Debug("Committing policy...")
+	return state.Commit(r.r, commitMessage, createRSLEntry, signCommit)
 }
