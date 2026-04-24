@@ -233,7 +233,10 @@ func TestAddRuleAndGetRules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := targetsMetadata.AddRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
+	err := targetsMetadata.AddRule("invalid-threshold-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 0)
+	assert.ErrorIs(t, err, tuf.ErrInvalidThreshold)
+
+	err = targetsMetadata.AddRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1)
 	assert.Nil(t, err)
 	assert.Contains(t, targetsMetadata.Delegations.Keys, key1.KeyID)
 	assert.Equal(t, key1, targetsMetadata.Delegations.Keys[key1.KeyID])
@@ -284,7 +287,10 @@ func TestUpdateDelegation(t *testing.T) {
 	if err := targetsMetadata.AddPrincipal(key2); err != nil {
 		t.Fatal(err)
 	}
-	err = targetsMetadata.UpdateRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1, tuf.ScopeAll, "", tuf.AccessReadWrite)
+	err = targetsMetadata.UpdateRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 0)
+	assert.ErrorIs(t, err, tuf.ErrInvalidThreshold)
+
+	err = targetsMetadata.UpdateRule("test-rule", []string{key1.KeyID, key2.KeyID}, []string{"test/"}, 1)
 	assert.Nil(t, err)
 	assert.Contains(t, targetsMetadata.Delegations.Keys, key1.KeyID)
 	assert.Equal(t, key1, targetsMetadata.Delegations.Keys[key1.KeyID])
