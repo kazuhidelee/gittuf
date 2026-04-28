@@ -343,6 +343,14 @@ func TestGetFilePathsChangedByCommitRepository(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"a"}, diffs)
 	})
+
+	t.Run("non-commit object", func(t *testing.T) {
+		blobID, err := repo.WriteBlob([]byte("test"))
+		require.Nil(t, err)
+
+		_, err = repo.GetFilePathsChangedByCommit(blobID)
+		assert.ErrorContains(t, err, "is not a commit object")
+	})
 }
 
 func TestGetFilePathsChangedSinceLastCommit(t *testing.T) {
