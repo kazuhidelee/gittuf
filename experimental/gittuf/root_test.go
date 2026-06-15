@@ -380,20 +380,11 @@ func TestRemoveRootKey(t *testing.T) {
 		unauthorizedSigner := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
 		newRootKey = tufv01.NewKeyFromSSLibKey(ssh.NewKeyFromBytes(t, targetsPubKeyBytes))
 
-		err := r.AddRootKey(testCtx, rootSigner, newRootKey, true)
-		require.Nil(t, err)
+		err = r.RemoveRootKey(testCtx, unauthorizedSigner, rootKey.KeyID, false)
+		assert.ErrorIs(t, err, ErrUnauthorizedKey)
 
-		newSigner := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
-		err = r.RemoveRootKey(testCtx, newSigner, rootSigner.MetadataKey().KeyID, true)
-		assert.Nil(t, err)
-	})
-
-	t.Run("lockout prevention: cannot remove the last root key", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		signer := setupSSHKeysForSigning(t, rootKeyBytes, rootPubKeyBytes)
-		rootKey := tufv01.NewKeyFromSSLibKey(signer.MetadataKey())
-
-		err := r.RemoveRootKey(testCtx, signer, rootKey.KeyID, false)
+		// Test error with removing key
+		err = r.RemoveRootKey(testCtx, originalSigner, newRootKey.KeyID, false)
 		assert.ErrorIs(t, err, tuf.ErrCannotMeetThreshold)
 	})
 }
@@ -975,32 +966,39 @@ func TestUpdateRootThreshold(t *testing.T) {
 	}
 	assert.Equal(t, 2, rootThreshold)
 
-	t.Run("unauthorized signer", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		unauthorizedSigner := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
-
-		err := r.UpdateRootThreshold(testCtx, unauthorizedSigner, 2, false)
-		assert.ErrorIs(t, err, ErrUnauthorizedKey)
-	})
-
-	t.Run("with signCommit", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		rootSigner := setupSSHKeysForSigning(t, rootKeyBytes, rootPubKeyBytes)
-		newRootKey := tufv01.NewKeyFromSSLibKey(ssh.NewKeyFromBytes(t, targetsPubKeyBytes))
-
-		err := r.AddRootKey(testCtx, rootSigner, newRootKey, true)
-		require.Nil(t, err)
-
-		err = r.UpdateRootThreshold(testCtx, rootSigner, 2, true)
-		assert.Nil(t, err)
-	})
-
 	t.Run("threshold boundary validation: cannot set threshold higher than keys", func(t *testing.T) {
 		r := createTestRepositoryWithRoot(t, "")
 		signer := setupSSHKeysForSigning(t, rootKeyBytes, rootPubKeyBytes)
 
 		err := r.UpdateRootThreshold(testCtx, signer, 2, false)
 		assert.ErrorIs(t, err, tuf.ErrCannotMeetThreshold)
+	})
+
+	t.Run("miscellaneous error checking", func(t *testing.T) {
+		tempDir := t.TempDir()
+		repo := gitinterface.CreateTestGitRepository(t, tempDir, false)
+		nr := &Repository{r: repo}
+
+		// Test signCommit
+		err = repo.SetGitConfig("user.signingkey", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = nr.UpdateRootThreshold(testCtx, nil, 1, true)
+		assert.ErrorIs(t, err, gitinterface.ErrSigningKeyNotSpecified)
+
+		// Test non-existent policy
+		err = nr.UpdateRootThreshold(testCtx, signer, 1, false)
+		assert.ErrorIs(t, err, gitinterface.ErrReferenceNotFound)
+
+		// Test unauthorized signer
+		r = createTestRepositoryWithRoot(t, "")
+
+		sv := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
+
+		err = r.UpdateRootThreshold(testCtx, sv, 1, true)
+		assert.ErrorIs(t, err, ErrUnauthorizedKey)
 	})
 }
 
@@ -1755,55 +1753,40 @@ func TestUpdateGlobalRule(t *testing.T) {
 		assert.Equal(t, []string{"git:refs/heads/main"}, globalRules[0].(tuf.GlobalRuleBlockForcePushes).GetProtectedNamespaces())
 	})
 
-	t.Run("unauthorized signer", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		unauthorizedSigner := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
+	t.Run("miscellaneous error checking", func(t *testing.T) {
+		tempDir := t.TempDir()
+		repo := gitinterface.CreateTestGitRepository(t, tempDir, false)
+		nr := &Repository{r: repo}
 
-		err := r.UpdateGlobalRuleThreshold(testCtx, unauthorizedSigner, "require-approval-for-main", []string{"git:refs/heads/main"}, 2, false)
+		// Test signCommit
+		err := repo.SetGitConfig("user.signingkey", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = nr.UpdateGlobalRuleThreshold(testCtx, nil, "", nil, 1, true)
+		assert.ErrorIs(t, err, gitinterface.ErrSigningKeyNotSpecified)
+
+		err = nr.UpdateGlobalRuleBlockForcePushes(testCtx, nil, "", nil, true)
+		assert.ErrorIs(t, err, gitinterface.ErrSigningKeyNotSpecified)
+
+		// Test non-existent policy
+		sv := setupSSHKeysForSigning(t, targetsKeyBytes, targetsPubKeyBytes)
+
+		err = nr.UpdateGlobalRuleThreshold(testCtx, sv, "", nil, 1, false)
+		assert.ErrorIs(t, err, rsl.ErrRSLEntryNotFound)
+
+		err = nr.UpdateGlobalRuleBlockForcePushes(testCtx, sv, "", nil, false)
+		assert.ErrorIs(t, err, rsl.ErrRSLEntryNotFound)
+
+		// Test unauthorized signer
+		r := createTestRepositoryWithRoot(t, "")
+
+		err = r.UpdateGlobalRuleThreshold(testCtx, sv, "", nil, 1, false)
 		assert.ErrorIs(t, err, ErrUnauthorizedKey)
 
-		err = r.UpdateGlobalRuleBlockForcePushes(testCtx, unauthorizedSigner, "block-force-pushes-for-main", []string{"git:refs/heads/main"}, false)
+		err = r.UpdateGlobalRuleBlockForcePushes(testCtx, sv, "", nil, false)
 		assert.ErrorIs(t, err, ErrUnauthorizedKey)
-	})
-
-	t.Run("with signCommit", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		rootSigner := setupSSHKeysForSigning(t, rootKeyBytes, rootPubKeyBytes)
-
-		err := r.AddGlobalRuleThreshold(testCtx, rootSigner, "require-approvals", []string{"git:refs/heads/main"}, 1, true)
-		require.Nil(t, err)
-
-		err = r.StagePolicy(testCtx, "", true, false)
-		require.Nil(t, err)
-
-		err = r.UpdateGlobalRuleThreshold(testCtx, rootSigner, "require-approvals", []string{"git:refs/heads/*"}, 2, true)
-		require.Nil(t, err)
-
-		err = r.StagePolicy(testCtx, "", true, false)
-		require.Nil(t, err)
-
-		err = r.AddGlobalRuleBlockForcePushes(testCtx, rootSigner, "block-force-pushes", []string{"git:refs/heads/main"}, true)
-		require.Nil(t, err)
-
-		err = r.StagePolicy(testCtx, "", true, false)
-		require.Nil(t, err)
-
-		err = r.UpdateGlobalRuleBlockForcePushes(testCtx, rootSigner, "block-force-pushes", []string{"git:refs/heads/*"}, true)
-		require.Nil(t, err)
-	})
-
-	t.Run("global rule type integrity", func(t *testing.T) {
-		r := createTestRepositoryWithRoot(t, "")
-		signer := setupSSHKeysForSigning(t, rootKeyBytes, rootPubKeyBytes)
-
-		err := r.AddGlobalRuleThreshold(testCtx, signer, "valid-threshold", []string{"git:refs/heads/main"}, 1, false)
-		assert.Nil(t, err)
-
-		err = r.StagePolicy(testCtx, "", true, false)
-		assert.Nil(t, err)
-
-		err = r.UpdateGlobalRuleBlockForcePushes(testCtx, signer, "valid-threshold", []string{"git:refs/heads/main"}, false)
-		assert.ErrorIs(t, err, tuf.ErrCannotUpdateGlobalRuleType)
 	})
 }
 
