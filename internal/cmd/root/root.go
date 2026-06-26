@@ -12,7 +12,6 @@ import (
 	"github.com/gittuf/gittuf/internal/cmd/attest"
 	"github.com/gittuf/gittuf/internal/cmd/cache"
 	"github.com/gittuf/gittuf/internal/cmd/clone"
-	"github.com/gittuf/gittuf/internal/cmd/dev"
 	"github.com/gittuf/gittuf/internal/cmd/policy"
 	"github.com/gittuf/gittuf/internal/cmd/policy/persistent"
 	"github.com/gittuf/gittuf/internal/cmd/profile"
@@ -117,7 +116,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(attest.New())
 	cmd.AddCommand(cache.New())
 	cmd.AddCommand(clone.New())
-	cmd.AddCommand(dev.New())
 	cmd.AddCommand(trust.New())
 	cmd.AddCommand(policy.New())
 	cmd.AddCommand(readaccess.New())
