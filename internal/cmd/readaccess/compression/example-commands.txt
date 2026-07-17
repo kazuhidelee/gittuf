@@ -1,0 +1,27 @@
+Same readers on both versions, so the demo should use delta for bob:
+
+go run . read-access demo \
+  --base-file internal/cmd/readaccess/compression/example-v1.txt \
+  --target-file internal/cmd/readaccess/compression/example-v2.txt \
+  --principal bob \
+  --base-principals bob \
+  --target-principals bob \
+  --out-dir /tmp/readaccess-demo-same-acl
+
+New reader added on v2, so bob should still use delta and alice should fall back to full:
+
+go run . read-access demo \
+  --base-file internal/cmd/readaccess/compression/example-v1.txt \
+  --target-file internal/cmd/readaccess/compression/example-v2.txt \
+  --principal bob \
+  --base-principals bob \
+  --target-principals bob,alice \
+  --out-dir /tmp/readaccess-demo-acl-change-bob
+
+go run . read-access demo \
+  --base-file internal/cmd/readaccess/compression/example-v1.txt \
+  --target-file internal/cmd/readaccess/compression/example-v2.txt \
+  --principal alice \
+  --base-principals bob \
+  --target-principals bob,alice \
+  --out-dir /tmp/readaccess-demo-acl-change-alice

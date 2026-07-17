@@ -4,6 +4,7 @@
 package readaccess
 
 import (
+	"github.com/gittuf/gittuf/internal/cmd/readaccess/compression"
 	"github.com/gittuf/gittuf/internal/cmd/readaccess/decrypt"
 	"github.com/gittuf/gittuf/internal/cmd/readaccess/encrypt"
 	"github.com/spf13/cobra"
@@ -16,6 +17,7 @@ func New() *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 
+	cmd.AddCommand(compression.New())
 	cmd.AddCommand(decrypt.New())
 	cmd.AddCommand(encrypt.New())
 

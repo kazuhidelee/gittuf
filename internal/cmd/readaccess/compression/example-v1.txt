@@ -1,0 +1,17 @@
+Project Arcanum Read Access Notes
+=================================
+
+This file is the older version of a protected document.
+
+Current status:
+- Encryption of protected files works.
+- Policy-based reader selection works.
+- Delta transport is still a demo.
+
+Planned next steps:
+1. Generate encrypted deltas for changed files.
+2. Let shared readers use base plus delta.
+3. Fall back to a full encrypted snapshot for newly added readers.
+
+Owner: Bob
+Visibility: readaccess-demo

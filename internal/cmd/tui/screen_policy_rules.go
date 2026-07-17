@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gittuf/gittuf/experimental/gittuf"
+	"github.com/gittuf/gittuf/internal/tuf"
 )
 
 type rule struct {
@@ -311,7 +312,7 @@ func repoAddRule(ctx context.Context, o *options, rule rule, authorizedPrincipal
 		return err
 	}
 
-	return repo.AddDelegation(ctx, signer, o.policyName, rule.name, authorizedPrincipalIDs, protectedNamespaces, rule.threshold, true)
+	return repo.AddDelegation(ctx, signer, o.policyName, rule.name, authorizedPrincipalIDs, protectedNamespaces, rule.threshold, tuf.ScopeAll, "", tuf.AccessReadWrite, true)
 }
 
 // repoUpdateRule updates an existing rule in the policy file.
@@ -326,7 +327,7 @@ func repoUpdateRule(ctx context.Context, o *options, r rule, authorizedPrincipal
 		return err
 	}
 
-	return repo.UpdateDelegation(ctx, signer, o.policyName, r.name, authorizedPrincipalIDs, protectedNamespaces, r.threshold, true)
+	return repo.UpdateDelegation(ctx, signer, o.policyName, r.name, authorizedPrincipalIDs, protectedNamespaces, r.threshold, tuf.ScopeAll, "", tuf.AccessReadWrite, true)
 }
 
 // repoRemoveRule removes a rule from the policy file.
