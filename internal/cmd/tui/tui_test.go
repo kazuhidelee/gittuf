@@ -111,7 +111,7 @@ func TestTUI(t *testing.T) {
 			return strings.Contains(string(out), "Home › Trust")
 		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
 
-		// select "View Global Rules" (already selected by default)
+		// select "Global Rules" (already selected by default)
 		tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
 
 		// Now we should end up on the Trust Global Rules screen.
@@ -122,6 +122,48 @@ func TestTUI(t *testing.T) {
 		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
 
 		// Click "q" to quit
+		tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+		tm.WaitFinished(t, teatest.WithFinalTimeout(time.Second*15))
+	})
+
+	t.Run("Trust Keys And Thresholds Navigation", func(t *testing.T) {
+		o := &options{
+			readOnly:  true,
+			targetRef: "policy",
+		}
+
+		m := initialModel(context.Background(), o)
+
+		tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
+
+		teatest.WaitFor(t, tm.Output(), func(out []byte) bool {
+			return strings.Contains(string(out), "Policy")
+		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
+
+		tm.Send(tea.KeyMsg{Type: tea.KeyDown})
+		tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+
+		teatest.WaitFor(t, tm.Output(), func(out []byte) bool {
+			return strings.Contains(string(out), "Home › Trust")
+		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
+
+		tm.Send(tea.KeyMsg{Type: tea.KeyDown})
+		tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+
+		teatest.WaitFor(t, tm.Output(), func(out []byte) bool {
+			content := string(out)
+			return strings.Contains(content, "Home › Trust › Keys & Thresholds") &&
+				strings.Contains(content, "Coming next")
+		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
+
+		tm.Send(tea.KeyMsg{Type: tea.KeyEsc})
+
+		teatest.WaitFor(t, tm.Output(), func(out []byte) bool {
+			content := string(out)
+			return strings.Contains(content, "Home › Trust") &&
+				strings.Contains(content, "Keys & Thresholds")
+		}, teatest.WithCheckInterval(time.Millisecond*100), teatest.WithDuration(time.Second*15))
+
 		tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 		tm.WaitFinished(t, teatest.WithFinalTimeout(time.Second*15))
 	})

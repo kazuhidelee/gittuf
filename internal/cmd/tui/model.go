@@ -31,6 +31,12 @@ const (
 	screenTrustGlobalRules                  // Global rule management screen
 	screenTrustAddGlobalRule                // Form: add a new global rule
 	screenTrustEditGlobalRule               // Form: edit selected global rule (prefilled)
+	screenTrustKeysThresholds               // Trust keys and thresholds menu
+	screenTrustHooks                        // Trust hooks menu
+	screenTrustPropagation                  // Trust propagation menu
+	screenTrustGitHubApp                    // Trust GitHub App menu
+	screenTrustLifecycle                    // Trust lifecycle menu
+	screenTrustRepoNetwork                  // Trust repository/network menu
 	screenHelp                              // Generic Help screen displaying keybindings
 )
 
@@ -164,7 +170,13 @@ func initialModel(ctx context.Context, o *options) model {
 		},
 		trustScreen: trustScreen{
 			trustScreenList: newMenuList("gittuf Trust Operations", []list.Item{
-				item{title: "View Global Rules", desc: "View and manage global rules"},
+				item{title: "Global Rules", desc: "View and manage global rules"},
+				item{title: "Keys & Thresholds", desc: "Manage root keys, policy keys, and thresholds"},
+				item{title: "Hooks", desc: "Manage trust hooks"},
+				item{title: "Propagation", desc: "Manage propagation directives"},
+				item{title: "GitHub App", desc: "Manage trusted GitHub App settings"},
+				item{title: "Lifecycle", desc: "Stage, sign, and apply trust changes"},
+				item{title: "Repo/Network", desc: "Manage controller, network, and repository settings"},
 			}, delegate),
 		},
 		policyRulesScreen: policyRulesScreen{

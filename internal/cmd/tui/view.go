@@ -346,6 +346,10 @@ func (m model) View() string {
 	case screenTrust:
 		return m.trustScreen.View(&m)
 
+	case screenTrustKeysThresholds, screenTrustHooks, screenTrustPropagation,
+		screenTrustGitHubApp, screenTrustLifecycle, screenTrustRepoNetwork:
+		return m.renderTrustSectionScreen(m.screen)
+
 	case screenPolicyRules:
 		return m.policyRulesScreen.View(&m)
 

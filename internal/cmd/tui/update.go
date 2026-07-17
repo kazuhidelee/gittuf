@@ -78,6 +78,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch m.screen {
 			case screenPolicy, screenTrust:
 				m.screen = screenChoice
+			case screenTrustKeysThresholds, screenTrustHooks, screenTrustPropagation,
+				screenTrustGitHubApp, screenTrustLifecycle, screenTrustRepoNetwork:
+				m.screen = screenTrust
 			case screenPolicyRules:
 				if m.policyRulesScreen.confirmDelete {
 					m.policyRulesScreen.confirmDelete = false
@@ -89,7 +92,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = screenPolicyRules
 			case screenHelp:
 				m.screen = m.helpScreen.previousScreen
-			default:
+			case screenTrustGlobalRules, screenTrustAddGlobalRule, screenTrustEditGlobalRule:
 				if m.trustGlobalRulesScreen.handleEsc(&m) {
 					return m, nil
 				}
@@ -105,6 +108,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.helpScreen.Update(msg, &m)
 		case screenTrust:
 			return m.trustScreen.Update(msg, &m)
+		case screenTrustKeysThresholds, screenTrustHooks, screenTrustPropagation,
+			screenTrustGitHubApp, screenTrustLifecycle, screenTrustRepoNetwork:
+			return m, nil
 		case screenPolicyRules, screenPolicyAddRule, screenPolicyEditRule:
 			return m.policyRulesScreen.Update(msg, &m)
 		case screenTrustGlobalRules, screenTrustAddGlobalRule, screenTrustEditGlobalRule:
@@ -122,6 +128,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.policyScreen.Update(msg, &m)
 	case screenTrust:
 		return m.trustScreen.Update(msg, &m)
+	case screenTrustKeysThresholds, screenTrustHooks, screenTrustPropagation,
+		screenTrustGitHubApp, screenTrustLifecycle, screenTrustRepoNetwork:
+		return m, nil
 	case screenPolicyRules, screenPolicyAddRule, screenPolicyEditRule:
 		return m.policyRulesScreen.Update(msg, &m)
 	case screenTrustGlobalRules, screenTrustAddGlobalRule, screenTrustEditGlobalRule:
