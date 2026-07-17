@@ -85,19 +85,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else {
 					m.screen = screenPolicy
 				}
-			case screenTrustGlobalRules:
-				if m.trustGlobalRulesScreen.confirmDelete {
-					m.trustGlobalRulesScreen.confirmDelete = false
-					m.trustGlobalRulesScreen.deleteTarget = ""
-				} else {
-					m.screen = screenTrust
-				}
 			case screenPolicyAddRule, screenPolicyEditRule:
 				m.screen = screenPolicyRules
-			case screenTrustAddGlobalRule, screenTrustEditGlobalRule:
-				m.screen = screenTrustGlobalRules
 			case screenHelp:
 				m.screen = m.helpScreen.previousScreen
+			default:
+				if m.trustGlobalRulesScreen.handleEsc(&m) {
+					return m, nil
+				}
 			}
 			return m, nil
 		}
